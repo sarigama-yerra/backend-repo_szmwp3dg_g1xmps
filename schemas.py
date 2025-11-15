@@ -1,48 +1,71 @@
-"""
-Database Schemas
+from pydantic import BaseModel, Field, EmailStr
+from typing import Optional, List, Literal
+from datetime import datetime
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
-"""
-
-from pydantic import BaseModel, Field
-from typing import Optional
-
-# Example schemas (replace with your own):
-
+# Users
 class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    email: EmailStr
+    name: str
+    password_hash: str
+    avatar_url: Optional[str] = None
+    role: Literal["user", "admin"] = "user"
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+# Folders
+class Folder(BaseModel):
+    name: str
+    owner_id: str
+    parent_id: Optional[str] = None
+    path: List[str] = []
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
-# Add your own schemas here:
-# --------------------------------------------------
+# Files
+class File(BaseModel):
+    name: str
+    owner_id: str
+    folder_id: Optional[str] = None
+    size: int = 0
+    mime_type: str
+    storage_key: str  # path in storage (local or S3)
+    checksum: Optional[str] = None
+    version: int = 1
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+# Sharing
+class Share(BaseModel):
+    resource_type: Literal["file", "folder"]
+    resource_id: str
+    granted_by: str
+    granted_to: str  # user id or email for invites
+    permission: Literal["view", "edit"] = "view"
+    created_at: Optional[datetime] = None
+
+# Auth
+class SignUpRequest(BaseModel):
+    email: EmailStr
+    name: str
+    password: str
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+class FolderCreate(BaseModel):
+    name: str
+    parent_id: Optional[str] = None
+
+class FolderRename(BaseModel):
+    name: str
+
+class ShareRequest(BaseModel):
+    resource_type: Literal["file", "folder"]
+    resource_id: str
+    granted_to: str
+    permission: Literal["view", "edit"] = "view"
